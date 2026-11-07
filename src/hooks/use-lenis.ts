@@ -3,6 +3,12 @@ import Lenis from 'lenis';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
 import gsap from 'gsap';
 
+declare global {
+  interface Window {
+    lenis?: Lenis;
+  }
+}
+
 export const useLenis = () => {
   useEffect(() => {
     gsap.registerPlugin(ScrollTrigger);
@@ -10,8 +16,10 @@ export const useLenis = () => {
     const lenis = new Lenis({
       lerp: 0.08,
       smoothWheel: true,
-      syncTouch: true,
+      syncTouch: false, // Don't override native smooth touch scrolling on mobile
     });
+
+    window.lenis = lenis;
 
     const raf = (time: number) => {
       lenis.raf(time);
@@ -23,6 +31,7 @@ export const useLenis = () => {
 
     return () => {
       cancelAnimationFrame(frame);
+      window.lenis = undefined;
       lenis.destroy();
     };
   }, []);

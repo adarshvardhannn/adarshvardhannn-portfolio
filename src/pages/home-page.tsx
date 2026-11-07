@@ -1,4 +1,4 @@
-import { useRef } from 'react';
+import { useRef, useEffect } from 'react';
 import { HeroSection } from '@/sections/hero';
 import { AboutSection } from '@/sections/about';
 import { ExperienceSection } from '@/sections/experience';
@@ -14,6 +14,25 @@ export const HomePage = () => {
   useScrollReveal('section');
   const activeSection = useActiveSection(['hero', 'about', 'experience', 'projects', 'skills', 'contact']);
 
+  useEffect(() => {
+    if (window.location.hash) {
+      const hash = window.location.hash;
+      const timer = setTimeout(() => {
+        const el = document.querySelector(hash);
+        if (el) {
+          if (window.lenis) {
+            window.lenis.scrollTo(el as HTMLElement, { offset: -80, duration: 1.1 });
+          } else {
+            const top = el.getBoundingClientRect().top + window.pageYOffset - 80;
+            window.scrollTo({ top, behavior: 'smooth' });
+          }
+        }
+      }, 350);
+
+      return () => clearTimeout(timer);
+    }
+  }, []);
+
   return (
     <SiteShell activeSection={activeSection}>
       <div ref={rootRef}>
@@ -27,3 +46,5 @@ export const HomePage = () => {
     </SiteShell>
   );
 };
+
+export default HomePage;

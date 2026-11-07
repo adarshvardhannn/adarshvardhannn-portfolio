@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react';
-import { motion } from 'framer-motion';
+import { useNavigate, useLocation } from 'react-router-dom';
+import { motion, AnimatePresence } from 'framer-motion';
 import { HiMenuAlt3, HiX } from 'react-icons/hi';
 import { navigationItems } from '@/data/site';
 import { cn } from '@/lib/cn';
@@ -8,20 +9,41 @@ import adarshLogo from '@/assets/adarsh_logo.png';
 
 export const Navbar = ({ activeSection, isScrolled }: { activeSection: string; isScrolled: boolean }) => {
   const [mobileOpen, setMobileOpen] = useState(false);
+  const navigate = useNavigate();
+  const location = useLocation();
 
   const navClassName = useMemo(
     () =>
       cn(
-        'absolute left-0 top-0 z-50 w-full border-b border-transparent transition-all duration-500',
-        isScrolled && 'border-white/8 bg-[#050705]/72 backdrop-blur-2xl',
+        'fixed left-0 top-0 z-50 w-full transition-all duration-300',
+        isScrolled || mobileOpen
+          ? 'border-b border-white/10 bg-[#050705]/85 backdrop-blur-2xl shadow-lg shadow-black/30'
+          : 'border-b border-transparent bg-transparent',
       ),
-    [isScrolled],
+    [isScrolled, mobileOpen],
   );
 
   const scrollTo = (href: string) => {
-    const target = document.querySelector(href);
-    target?.scrollIntoView({ behavior: 'smooth', block: 'start' });
     setMobileOpen(false);
+
+    // If currently on another page, navigate to home with the hash
+    if (location.pathname !== '/') {
+      navigate(`/${href}`);
+      return;
+    }
+
+    const target = document.querySelector(href);
+    if (!target) return;
+
+    // Small delay ensures mobile drawer animation starts closing without thrashing scroll target
+    setTimeout(() => {
+      if (window.lenis) {
+        window.lenis.scrollTo(target as HTMLElement, { offset: -80, duration: 1.1 });
+      } else {
+        const top = target.getBoundingClientRect().top + window.pageYOffset - 80;
+        window.scrollTo({ top, behavior: 'smooth' });
+      }
+    }, 120);
   };
 
   return (
@@ -34,6 +56,7 @@ export const Navbar = ({ activeSection, isScrolled }: { activeSection: string; i
           <span className="font-display text-xl font-semibold tracking-wide text-white">Adarsh</span>
         </button>
 
+        {/* Desktop Navigation */}
         <nav className="hidden items-center gap-2 md:flex">
           {navigationItems.map((item) => (
             <button
@@ -52,6 +75,7 @@ export const Navbar = ({ activeSection, isScrolled }: { activeSection: string; i
           </Button>
         </nav>
 
+        {/* Mobile Hamburger Toggle Button */}
         <button
           onClick={() => setMobileOpen((current) => !current)}
           className="inline-flex h-11 w-11 items-center justify-center rounded-full border border-white/10 bg-white/[0.03] text-white/80 transition-colors duration-300 hover:border-emerald-400/30 hover:text-white md:hidden"
@@ -61,35 +85,43 @@ export const Navbar = ({ activeSection, isScrolled }: { activeSection: string; i
         </button>
       </div>
 
-      <motion.div
-        initial={false}
-        animate={{ height: mobileOpen ? 'auto' : 0, opacity: mobileOpen ? 1 : 0 }}
-        transition={{ duration: 0.35, ease: 'easeOut' }}
-        className="overflow-hidden border-t border-white/8 bg-[#050705]/92 backdrop-blur-2xl md:hidden"
-      >
-        <div className="mx-auto flex max-w-7xl flex-col gap-2 px-5 py-4 sm:px-6">
-          {navigationItems.map((item) => (
-            <button
-              key={item.href}
-              onClick={() => scrollTo(item.href)}
-              className={cn(
-                'rounded-2xl px-4 py-3 text-left text-sm text-white/70 transition-colors duration-300 hover:bg-white/[0.05] hover:text-white',
-                activeSection === item.href.slice(1) && 'bg-white/[0.05] text-white',
-              )}
-            >
-              {item.label}
-            </button>
-          ))}
-          <Button
-            variant="default"
-            size="sm"
-            onClick={() => scrollTo('#contact')}
-            className="mt-2 w-full justify-center"
+      {/* Mobile Drawer */}
+      <AnimatePresence>
+        {mobileOpen && (
+          <motion.div
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: 'auto', opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            transition={{ duration: 0.28, ease: 'easeOut' }}
+            className="overflow-hidden border-t border-white/8 bg-[#050705]/95 backdrop-blur-2xl md:hidden"
           >
-            Let’s talk
-          </Button>
-        </div>
-      </motion.div>
+            <div className="mx-auto flex max-w-7xl flex-col gap-2 px-5 py-4 sm:px-6">
+              {navigationItems.map((item) => (
+                <button
+                  key={item.href}
+                  onClick={() => scrollTo(item.href)}
+                  className={cn(
+                    'rounded-2xl px-4 py-3 text-left text-sm text-white/70 transition-colors duration-300 active:scale-[0.98] hover:bg-white/[0.05] hover:text-white',
+                    activeSection === item.href.slice(1) && 'bg-white/[0.08] text-white font-medium',
+                  )}
+                >
+                  {item.label}
+                </button>
+              ))}
+              <Button
+                variant="default"
+                size="sm"
+                onClick={() => scrollTo('#contact')}
+                className="mt-2 w-full justify-center active:scale-[0.98]"
+              >
+                Let’s talk
+              </Button>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </header>
   );
 };
+
+export default Navbar;
