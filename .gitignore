@@ -8,7 +8,6 @@ node_modules/
 
 # Build outputs
 dist/
-server/dist/
 
 # IDE / editor files
 .vscode/
