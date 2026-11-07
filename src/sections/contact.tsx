@@ -7,8 +7,8 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { SectionHeading } from '@/components/ui/section-heading';
 
-// If VITE_API_URL is set (e.g. custom backend), use it; otherwise use relative /api/contact
-const API_BASE = import.meta.env.VITE_API_URL ? import.meta.env.VITE_API_URL.replace(/\/$/, '') : '';
+const WEB3FORMS_ACCESS_KEY =
+  import.meta.env.VITE_WEB3FORMS_ACCESS_KEY || 'b8c49249-bec4-4dc3-a782-ef676359d479';
 
 export const ContactSection = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -67,77 +67,35 @@ export const ContactSection = () => {
     }
 
     try {
-      let sentSuccessfully = false;
-      let failureMessage = '';
+      const response = await fetch('https://api.web3forms.com/submit', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Accept: 'application/json',
+        },
+        body: JSON.stringify({
+          access_key: WEB3FORMS_ACCESS_KEY,
+          name,
+          email,
+          subject: `[Portfolio Contact] ${subject}`,
+          message,
+          from_name: `${name} (via adarshvardhannn.me)`,
+          botcheck: website,
+        }),
+      });
 
-      // Primary Strategy: Internal Serverless / API Route (/api/contact)
-      // This keeps third-party keys and URLs 100% hidden on the server.
-      try {
-        const endpoint = API_BASE ? `${API_BASE}/api/contact` : '/api/contact';
-        const response = await fetch(endpoint, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            Accept: 'application/json',
-          },
-          body: JSON.stringify({ name, email, subject, message, website }),
-        });
+      const data = await response.json();
 
-        if (response.status !== 404) {
-          const result = await response.json();
-          if (response.ok && result.success) {
-            sentSuccessfully = true;
-          } else {
-            failureMessage = result.message || 'Unable to send your message. Please try again.';
-          }
-        }
-      } catch {
-        // Fall through to client fallback if /api/contact is unavailable
-      }
-
-      // Fallback Strategy: Direct Client Web3Forms submission (if running static or fallback key provided)
-      if (!sentSuccessfully && !failureMessage) {
-        const clientKey = import.meta.env.VITE_WEB3FORMS_ACCESS_KEY;
-        if (clientKey) {
-          try {
-            const directResponse = await fetch('https://api.web3forms.com/submit', {
-              method: 'POST',
-              headers: {
-                'Content-Type': 'application/json',
-                Accept: 'application/json',
-              },
-              body: JSON.stringify({
-                access_key: clientKey,
-                name,
-                email,
-                subject: `[Portfolio Contact] ${subject}`,
-                message,
-                botcheck: website,
-              }),
-            });
-
-            const directResult = await directResponse.json();
-            if (directResponse.ok && directResult.success) {
-              sentSuccessfully = true;
-            } else {
-              failureMessage = directResult.message || 'Unable to send message via fallback.';
-            }
-          } catch {
-            failureMessage = 'Network error while delivering message.';
-          }
-        }
-      }
-
-      if (sentSuccessfully) {
+      if (response.ok && data.success) {
         setSubmitStatus('success');
         form.reset();
       } else {
         setSubmitStatus('error');
-        setErrorMessage(failureMessage || 'Unable to send your message. Please try again.');
+        setErrorMessage(data.message || 'Unable to send your message. Please try again.');
       }
     } catch {
       setSubmitStatus('error');
-      setErrorMessage('Unable to send your message. Please try again.');
+      setErrorMessage('Unable to connect to the mail service. Please check your connection and try again.');
     } finally {
       setIsSubmitting(false);
       submittingRef.current = false;
